@@ -21,7 +21,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
-EXPOSE 3000
-CMD ["npx","next","start","-p","3000"]
+EXPOSE 3100
+CMD ["npx","next","start","-p","3100"]
 
 

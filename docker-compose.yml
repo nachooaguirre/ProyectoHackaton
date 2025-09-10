@@ -17,16 +17,16 @@ services:
     env_file:
       - ./backend/.env
     ports:
-      - "3001:3001"
+      - "5100:5100"
     restart: unless-stopped
 
   frontend:
     build: ./frontend
     container_name: moviesexpress-frontend
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5100
     ports:
-      - "3000:3000"
+      - "3100:3100"
     depends_on:
       - backend
     restart: unless-stopped
