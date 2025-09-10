@@ -9,8 +9,11 @@ class MovieRecommendationDto {
     poster;
     rating;
     trailerUrl;
+<<<<<<< HEAD
     watchLink;
     providers;
+=======
+>>>>>>> 0111ec8a9e3c8467df8a07c3768e8eb147391359
 }
 exports.MovieRecommendationDto = MovieRecommendationDto;
 //# sourceMappingURL=movie-recommendation.dto.js.map
