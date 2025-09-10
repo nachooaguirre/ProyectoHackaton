@@ -4,8 +4,9 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ENV NODE_ENV=production
-ENV PORT=5100
+RUN npm run build
+# Render setea $PORT, Nest usará process.env.PORT
 EXPOSE 5100
-CMD ["npm","run","start:prod"]
+CMD ["sh","-c","node dist/main.js"]
 
 

@@ -22,6 +22,7 @@ COPY --from=builder /app/public ./public
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 EXPOSE 3100
-CMD ["npx","next","start","-p","3100"]
+# Render setea $PORT; usamos ese valor si existe
+CMD ["sh","-c","npx next start -p ${PORT:-3100}"]
 
 
