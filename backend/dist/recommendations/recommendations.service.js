@@ -18,6 +18,26 @@ let RecommendationsService = class RecommendationsService {
     omdbApiKey = process.env.OMDB_API_KEY;
     tmdbApiKey = process.env.TMDB_API_KEY;
     youtubeApiKey = process.env.YOUTUBE_API_KEY;
+    normalizeProvider = (name) => {
+        const slug = (name || '')
+            .toLowerCase()
+            .replace(/\+/g, 'plus')
+            .replace(/[^a-z0-9]/g, '');
+        const aliases = {
+            primevideo: 'amazonprimevideo',
+            amazonprime: 'amazonprimevideo',
+            hbo: 'hbomax',
+            max: 'hbomax',
+            hbomax: 'hbomax',
+            disney: 'disneyplus',
+            disneyplus: 'disneyplus',
+            paramount: 'paramountplus',
+            paramountplus: 'paramountplus',
+            appletv: 'appletvplus',
+            appletvplus: 'appletvplus',
+        };
+        return aliases[slug] || slug;
+    };
     async getRecommendations(filters) {
         const count = Math.max(1, Math.min(50, filters.count ?? 5));
         const systemPrompt = 'Eres un asistente que recomienda películas. Devuelve un JSON con este formato exacto: {"movies":[{"title":"","year":"","reason":""}]} sin texto adicional.';
@@ -40,6 +60,9 @@ let RecommendationsService = class RecommendationsService {
         catch {
             movies = [];
         }
+        const selected = Array.isArray(filters?.platforms)
+            ? filters.platforms.map((s) => this.normalizeProvider(s))
+            : [];
         const enriched = await Promise.all(movies.slice(0, count).map(async (m) => {
             let base = { title: m.title, year: m.year, reason: m.reason };
             if (this.omdbApiKey) {
@@ -53,35 +76,73 @@ let RecommendationsService = class RecommendationsService {
                             year: data.Year ?? base.year,
                             reason: base.reason,
                             imdbId: data.imdbID,
-                            poster: data.Poster && data.Poster !== 'N/A' ? data.Poster : undefined,
+                            poster: data.Poster && data.Poster !== 'N/A' ? data.Poster : base.poster,
                             rating: Array.isArray(data.Ratings) && data.Ratings.length > 0
                                 ? data.Ratings[0].Value
-                                : undefined,
+                                : base.rating,
                         };
                     }
                 }
                 catch { }
             }
-            if ((!base.poster || base.poster === 'N/A') && this.tmdbApiKey) {
+            if (this.tmdbApiKey) {
                 try {
-                    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${this.tmdbApiKey}&query=${encodeURIComponent(m.title)}${m.year ? `&year=${encodeURIComponent(m.year)}` : ''}&include_adult=false&language=es-ES`;
-                    const res = await (0, cross_fetch_1.default)(searchUrl);
-                    const tmdb = (await res.json());
-                    const first = Array.isArray(tmdb?.results) && tmdb.results.length > 0 ? tmdb.results[0] : null;
-                    if (first && first.poster_path) {
-                        base.poster = `https://image.tmdb.org/t/p/w342${first.poster_path}`;
+                    const region = filters?.region?.toUpperCase?.() || (process.env.TMDB_REGION || 'AR').toUpperCase();
+                    const movieSearch = `https://api.themoviedb.org/3/search/movie?api_key=${this.tmdbApiKey}&query=${encodeURIComponent(m.title)}${m.year ? `&year=${encodeURIComponent(m.year)}` : ''}&include_adult=false&language=es-ES`;
+                    let res = await (0, cross_fetch_1.default)(movieSearch);
+                    let data = (await res.json());
+                    let first = Array.isArray(data?.results) && data.results.length > 0 ? data.results[0] : null;
+                    let media = first ? 'movie' : null;
+                    if (!first) {
+                        const tvSearch = `https://api.themoviedb.org/3/search/tv?api_key=${this.tmdbApiKey}&query=${encodeURIComponent(m.title)}&include_adult=false&language=es-ES`;
+                        res = await (0, cross_fetch_1.default)(tvSearch);
+                        data = (await res.json());
+                        first = Array.isArray(data?.results) && data.results.length > 0 ? data.results[0] : null;
+                        media = first ? 'tv' : null;
                     }
-                    if (!base.rating && typeof first?.vote_average === 'number') {
-                        base.rating = String(first.vote_average);
-                    }
-                    if (first?.id) {
+                    if (first) {
+                        if (first.poster_path && (!base.poster || base.poster === 'N/A')) {
+                            base.poster = `https://image.tmdb.org/t/p/w342${first.poster_path}`;
+                        }
+                        if (!base.rating && typeof first?.vote_average === 'number') {
+                            base.rating = String(first.vote_average);
+                        }
                         try {
-                            const videosUrl = `https://api.themoviedb.org/3/movie/${first.id}/videos?api_key=${this.tmdbApiKey}&language=es-ES`;
+                            const videosUrl = `https://api.themoviedb.org/3/${media === 'tv' ? 'tv' : 'movie'}/${first.id}/videos?api_key=${this.tmdbApiKey}&language=es-ES`;
                             const vres = await (0, cross_fetch_1.default)(videosUrl);
                             const vdata = (await vres.json());
                             const yt = (vdata?.results || []).find((v) => v.site === 'YouTube' && v.type === 'Trailer' && v.key) || (vdata?.results || []).find((v) => v.site === 'YouTube' && v.key);
-                            if (yt?.key) {
+                            if (yt?.key)
                                 base.trailerUrl = `https://www.youtube.com/embed/${yt.key}`;
+                        }
+                        catch { }
+                        try {
+                            const provUrl = `https://api.themoviedb.org/3/${media === 'tv' ? 'tv' : 'movie'}/${first.id}/watch/providers?api_key=${this.tmdbApiKey}`;
+                            const pres = await (0, cross_fetch_1.default)(provUrl);
+                            const pdata = (await pres.json());
+                            const entry = pdata?.results?.[region] || pdata?.results?.US || pdata?.results?.AR;
+                            if (entry) {
+                                base.watchLink = entry.link;
+                                const pack = [];
+                                const seen = new Set();
+                                const take = (arr, type) => Array.isArray(arr)
+                                    ? arr.slice(0, 8).forEach((p) => {
+                                        if (p?.provider_name && p?.logo_path && !seen.has(p.provider_name)) {
+                                            seen.add(p.provider_name);
+                                            pack.push({ name: p.provider_name, logo: `https://image.tmdb.org/t/p/w92${p.logo_path}`, type: type ?? 'flatrate' });
+                                        }
+                                    })
+                                    : undefined;
+                                take(entry.flatrate, 'flatrate');
+                                if (pack.length < 8)
+                                    take(entry.free, 'free');
+                                if (pack.length < 8)
+                                    take(entry.ads, 'ads');
+                                if (pack.length < 8)
+                                    take(entry.rent, 'rent');
+                                if (pack.length < 8)
+                                    take(entry.buy, 'buy');
+                                base.providers = pack.length ? pack : undefined;
                             }
                         }
                         catch { }
@@ -96,15 +157,36 @@ let RecommendationsService = class RecommendationsService {
                     const yres = await (0, cross_fetch_1.default)(yurl);
                     const ydata = (await yres.json());
                     const id = ydata?.items?.[0]?.id?.videoId;
-                    if (id) {
+                    if (id)
                         base.trailerUrl = `https://www.youtube.com/embed/${id}`;
-                    }
                 }
                 catch { }
             }
+            if (selected.length) {
+                const allowedTypes = ['flatrate', 'ads', 'free'];
+                const names = (base.providers || [])
+                    .filter((p) => allowedTypes.includes(p.type))
+                    .map((p) => this.normalizeProvider(p.name));
+                const ok = names.some((n) => selected.includes(n));
+                if (!ok)
+                    return null;
+            }
             return base;
         }));
-        return enriched;
+        const finalList = selected.length
+            ? enriched.filter((m) => {
+                if (!m)
+                    return false;
+                const allowedTypes = ['flatrate', 'ads', 'free'];
+                const names = (m.providers || [])
+                    .filter((p) => allowedTypes.includes(p.type))
+                    .map((p) => this.normalizeProvider(p.name));
+                if (!names.length)
+                    return false;
+                return names.some((n) => selected.includes(n));
+            })
+            : enriched.filter(Boolean);
+        return finalList;
     }
     buildUserPrompt(filters, count) {
         const parts = [];

@@ -5,6 +5,7 @@ export declare class RecommendationsService {
     private readonly omdbApiKey;
     private readonly tmdbApiKey;
     private readonly youtubeApiKey;
+    private readonly normalizeProvider;
     getRecommendations(filters: RecommendationFiltersDto): Promise<MovieRecommendationDto[]>;
     private buildUserPrompt;
 }

@@ -92,6 +92,78 @@ a {
   opacity: 0.8;
 }
 
+.platformsBlock { position: relative; }
+.platformsTitle { display: inline-block; font-weight: 600; letter-spacing: 0.2px; margin-bottom: 8px; }
+
+/* Platforms container card styling */
+.form .chips.elevated {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(109,93,252,0.4);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+}
+
+.chipSelected {
+  background: rgba(109,93,252,0.2);
+  border-color: #6d5dfc;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.3);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.chip input:checked::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #6d5dfc;
+  border-radius: 2px;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+  transition: transform 0.12s ease;
+}
+
+.chipIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-grid;
+  place-items: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chipText {
+  padding: 0 4px;
+}
+
 .input {
   width: 100%;
   background: rgba(0,0,0,0.3);
@@ -111,6 +183,10 @@ a {
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
   height: 44px;
+}
+
+.button:hover {
+  transform: translateY(-1px);
 }
 
 .button:disabled {

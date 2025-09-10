@@ -9,6 +9,8 @@ class MovieRecommendationDto {
     poster;
     rating;
     trailerUrl;
+    watchLink;
+    providers;
 }
 exports.MovieRecommendationDto = MovieRecommendationDto;
 //# sourceMappingURL=movie-recommendation.dto.js.map

@@ -10,7 +10,25 @@ type Movie = {
   rating?: string;
   trailerUrl?: string;
   watchLink?: string;
-  providers?: { name: string; logo: string }[];
+  providers?: { name: string; logo: string; type?: 'flatrate' | 'rent' | 'buy' | 'free' | 'ads' }[];
+};
+
+const KNOWN_PLATFORMS = [
+  "Netflix",
+  "Amazon Prime Video",
+  "Disney Plus",
+  "HBO Max",
+  "Paramount Plus",
+  "Apple TV Plus",
+] as const;
+
+const PLATFORM_META: Record<(typeof KNOWN_PLATFORMS)[number], { label: string; svg: string; color: string }> = {
+  Netflix: { label: 'Netflix', svg: '/icons/netflix.svg', color: '#e50914' },
+  'Amazon Prime Video': { label: 'Prime Video', svg: '/icons/primevideo.svg', color: '#00a8e1' },
+  'Disney Plus': { label: 'Disney Plus', svg: '/icons/disneyplus.svg', color: '#0a84ff' },
+  'HBO Max': { label: 'HBO Max', svg: '/icons/hbomax.svg', color: '#6d5dfc' },
+  'Paramount Plus': { label: 'Paramount Plus', svg: '/icons/paramountplus.svg', color: '#0064ff' },
+  'Apple TV Plus': { label: 'Apple TV Plus', svg: '/icons/appletvplus.svg', color: '#9aa0a6' },
 };
 
 export default function Home() {
@@ -21,6 +39,29 @@ export default function Home() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState<Record<number, boolean>>({});
+  const [platformsAll, setPlatformsAll] = useState<boolean>(true);
+  const [platforms, setPlatforms] = useState<string[]>([]);
+
+  const normalizeProvider = (name: string) => {
+    const slug = (name || '')
+      .toLowerCase()
+      .replace(/\+/g, 'plus')
+      .replace(/[^a-z0-9]/g, '');
+    const aliases: Record<string, string> = {
+      primevideo: 'amazonprimevideo',
+      amazonprime: 'amazonprimevideo',
+      hbo: 'hbomax',
+      max: 'hbomax',
+      hbomax: 'hbomax',
+      disney: 'disneyplus',
+      disneyplus: 'disneyplus',
+      paramount: 'paramountplus',
+      paramountplus: 'paramountplus',
+      appletv: 'appletvplus',
+      appletvplus: 'appletvplus',
+    };
+    return aliases[slug] || slug;
+  };
 
   function getYouTubeId(url?: string): string | null {
     if (!url) return null;
@@ -41,11 +82,24 @@ export default function Home() {
           prompt: prompt || undefined,
           count,
           region,
+          platforms: platformsAll ? undefined : platforms,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Error del servidor");
-      setMovies(Array.isArray(data?.movies) ? data.movies : []);
+      const incoming: Movie[] = Array.isArray(data?.movies) ? data.movies : [];
+      // Frontend safety filter by platforms to avoid falsos positivos
+      const selected = platformsAll ? [] : platforms.map((p) => normalizeProvider(p));
+      const allowedTypes: ReadonlyArray<'flatrate' | 'free' | 'ads'> = ['flatrate', 'free', 'ads'] as const;
+      const filtered = selected.length
+        ? incoming.filter((m) => {
+            const names = (m.providers || [])
+              .filter((p) => !p.type || (p.type === 'flatrate' || p.type === 'free' || p.type === 'ads'))
+              .map((p) => normalizeProvider(p.name));
+            return names.length > 0 && names.some((n) => selected.includes(n));
+          })
+        : incoming;
+      setMovies(filtered);
     } catch (err: any) {
       setError(err?.message ?? "Error al obtener recomendaciones");
     } finally {
@@ -56,8 +110,12 @@ export default function Home() {
   return (
     <div className="container">
       <header className="header">
-        <h1>Recomendador de Películas</h1>
-        <p>Describe lo que querés ver y elegí cuántas sugerencias.</p>
+        <h1>MoviesExpress</h1>
+        <p>
+          Describe lo que querés ver y elegí cuántas sugerencias. Cuanto más contexto
+          mejor: podés sumar géneros, actores/actrices, directores, rango de años o
+          calificaciones que te interesen para que las recomendaciones sean más precisas.
+        </p>
       </header>
 
       <form onSubmit={onSubmit} className="card form">
@@ -67,7 +125,6 @@ export default function Home() {
             className="input"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ej: Quiero un thriller psicológico con giros inesperados"
             rows={3}
           />
         </label>
@@ -97,6 +154,50 @@ export default function Home() {
             <option value="CO">Colombia</option>
           </select>
         </label>
+        <fieldset className="field platformsBlock" style={{ gridColumn: "1 / -1" }}>
+          <span className="label platformsTitle">Plataformas</span>
+          <div className={`chips elevated ${platformsAll && platforms.length === 0 ? '' : 'active'}`}>
+            <label className={`chip ${platformsAll ? "chipSelected" : ""}`}>
+              <input
+                type="checkbox"
+                checked={platformsAll}
+                onChange={(e) => {
+                  setPlatformsAll(e.target.checked);
+                  if (e.target.checked) setPlatforms([]);
+                }}
+              />
+              <span className="chipIcon" style={{ backgroundColor: '#6d5dfc' }}>★</span>
+              <span className="chipText">Todas</span>
+            </label>
+            {KNOWN_PLATFORMS.map((p) => (
+              <label key={p} className={`chip ${!platformsAll && platforms.includes(p) ? "chipSelected" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={!platformsAll && platforms.includes(p)}
+                  onChange={(e) => {
+                    // Si estaba en "Todas", al tildar una plataforma pasamos a modo selectivo
+                    if (platformsAll) {
+                      setPlatformsAll(false);
+                      if (e.target.checked) {
+                        setPlatforms([p]);
+                        return;
+                      }
+                    }
+                    setPlatforms((prev) =>
+                      e.target.checked ? [...prev, p] : prev.filter((x) => x !== p)
+                    );
+                  }}
+                />
+                <span className="chipIcon" style={{ backgroundColor: PLATFORM_META[p].color }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={PLATFORM_META[p].svg} alt="" width={14} height={14} />
+                </span>
+                <span className="chipText">{PLATFORM_META[p].label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         <button type="submit" className="button" disabled={loading || !prompt.trim()}>
           {loading ? "Buscando..." : "Recomendar"}
         </button>

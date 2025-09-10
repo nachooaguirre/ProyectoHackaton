@@ -6,4 +6,9 @@ export declare class MovieRecommendationDto {
     poster?: string;
     rating?: string;
     trailerUrl?: string;
+    watchLink?: string;
+    providers?: {
+        name: string;
+        logo: string;
+    }[];
 }

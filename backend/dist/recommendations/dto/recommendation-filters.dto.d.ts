@@ -7,4 +7,6 @@ export declare class RecommendationFiltersDto {
     maxYear?: number;
     minRating?: number;
     count?: number;
+    region?: string;
+    platforms?: string[];
 }

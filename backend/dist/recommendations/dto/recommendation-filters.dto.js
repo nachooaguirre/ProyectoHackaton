@@ -10,6 +10,8 @@ class RecommendationFiltersDto {
     maxYear;
     minRating;
     count;
+    region;
+    platforms;
 }
 exports.RecommendationFiltersDto = RecommendationFiltersDto;
 //# sourceMappingURL=recommendation-filters.dto.js.map
