@@ -1,34 +1,40 @@
 version: '3.9'
 services:
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: moviesexpress-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - frontend
-      - backend
-    restart: unless-stopped
   backend:
     build: ./backend
     container_name: moviesexpress-backend
     env_file:
       - ./backend/.env
-    ports:
-      - "5100:5100"
+    expose:
+      - "5100"
+    networks:
+      - coolify
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.backend.rule=Host(`${SERVICE_FQDN_BACKEND}`)'
+      - 'traefik.http.services.backend.loadbalancer.server.port=5100'
     restart: unless-stopped
 
   frontend:
     build: ./frontend
     container_name: moviesexpress-frontend
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5100
-    ports:
-      - "3100:3100"
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+    expose:
+      - "3100"
     depends_on:
       - backend
+    networks:
+      - coolify
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.frontend.rule=Host(`${SERVICE_FQDN_FRONTEND}`)'
+      - 'traefik.http.services.frontend.loadbalancer.server.port=3100'
     restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
+    name: coolify
 
 
