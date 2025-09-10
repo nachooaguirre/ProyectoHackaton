@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -35,11 +36,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <header style={{ position: 'sticky', top: 0, zIndex: 10, padding: '8px 20px' }}>
-          <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/ChatGPT%20Image%209%20sept%202025,%2009_58_49%20p.m..png" alt="MoviesExpress" width={44} height={44} />
             
-          </a>
+          </Link>
         </header>
         {children}
       </body>

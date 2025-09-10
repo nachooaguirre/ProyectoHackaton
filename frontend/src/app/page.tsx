@@ -75,7 +75,11 @@ export default function Home() {
     setError(null);
     setMovies([]);
     try {
-      const res = await fetch("/api/recommendations", {
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const endpoint = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}/recommendations`
+        : '/api/recommendations';
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -88,20 +92,20 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Error del servidor");
       const incoming: Movie[] = Array.isArray(data?.movies) ? data.movies : [];
-      // Frontend safety filter by platforms to avoid falsos positivos
       const selected = platformsAll ? [] : platforms.map((p) => normalizeProvider(p));
       const allowedTypes: ReadonlyArray<'flatrate' | 'free' | 'ads'> = ['flatrate', 'free', 'ads'] as const;
       const filtered = selected.length
         ? incoming.filter((m) => {
             const names = (m.providers || [])
-              .filter((p) => !p.type || (p.type === 'flatrate' || p.type === 'free' || p.type === 'ads'))
+              .filter((p) => !p.type || allowedTypes.includes(p.type as typeof allowedTypes[number]))
               .map((p) => normalizeProvider(p.name));
             return names.length > 0 && names.some((n) => selected.includes(n));
           })
         : incoming;
       setMovies(filtered);
-    } catch (err: any) {
-      setError(err?.message ?? "Error al obtener recomendaciones");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error al obtener recomendaciones";
+      setError(message);
     } finally {
       setLoading(false);
     }
