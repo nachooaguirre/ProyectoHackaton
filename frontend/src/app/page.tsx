@@ -75,7 +75,7 @@ export default function Home() {
     setError(null);
     setMovies([]);
     try {
-      const res = await fetch("http://localhost:3001/recommendations", {
+      const res = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
