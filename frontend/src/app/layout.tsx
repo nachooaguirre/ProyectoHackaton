@@ -35,13 +35,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <header style={{ position: 'sticky', top: 0, zIndex: 10, padding: '8px 20px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/ChatGPT%20Image%209%20sept%202025,%2009_58_49%20p.m..png" alt="MoviesExpress" width={44} height={44} />
-            
-          </Link>
-        </header>
         {children}
       </body>
     </html>
