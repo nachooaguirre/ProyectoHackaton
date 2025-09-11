@@ -75,7 +75,7 @@ export default function Home() {
     setError(null);
     setMovies([]);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://proyectohackaton.onrender.com';
       const endpoint = baseUrl
         ? `${baseUrl.replace(/\/$/, '')}/recommendations`
         : '/api/recommendations';
