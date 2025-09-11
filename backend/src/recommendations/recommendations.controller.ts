@@ -12,10 +12,12 @@ export class RecommendationsController {
       const result = await this.recommendationsService.getRecommendations(body);
       return { movies: result };
     } catch (err: any) {
-      throw new HttpException(
-        { message: err?.message ?? 'Failed to generate recommendations' },
-        HttpStatus.BAD_REQUEST,
-      );
+      const rawMessage: string = typeof err?.message === 'string' ? err.message : '';
+      const sanitizedMessage = /Incorrect API key/i.test(rawMessage)
+        ? 'OpenAI API key inválida o faltante.'
+        : 'No se pudieron generar recomendaciones.';
+      const status = err?.status === 401 ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_REQUEST;
+      throw new HttpException({ message: sanitizedMessage }, status);
     }
   }
 }
